@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SlabLog</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --border: #2a2a3d;
+    --accent-buy: #00e5a0;
+    --accent-sell: #ff4f6d;
+    --accent-buy-dim: rgba(0,229,160,0.12);
+    --accent-sell-dim: rgba(255,79,109,0.12);
+    --text: #f0f0f8;
+    --muted: #6b6b8a;
+    --radius: 16px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 0 0 40px;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* Noise overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+  }
+
+  header {
+    padding: 32px 24px 20px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 28px;
+    letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent-buy);
+    box-shadow: 0 0 12px var(--accent-buy);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(0.85); }
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-top: 4px;
+    padding-left: 20px;
+  }
+
+  /* Mode Toggle */
+  .mode-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 0 24px;
+    margin-bottom: 28px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .mode-btn {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+  }
+
+  .mode-btn .icon { font-size: 26px; }
+
+  .mode-btn.active-buy {
+    background: var(--accent-buy-dim);
+    border-color: var(--accent-buy);
+    color: var(--accent-buy);
+    box-shadow: 0 0 20px rgba(0,229,160,0.1);
+  }
+
+  .mode-btn.active-sell {
+    background: var(--accent-sell-dim);
+    border-color: var(--accent-sell);
+    color: var(--accent-sell);
+    box-shadow: 0 0 20px rgba(255,79,109,0.1);
+  }
+
+  /* Form */
+  .form-area {
+    padding: 0 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .field-label {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .field-group { display: flex; flex-direction: column; }
+
+  input, select, textarea {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 15px;
+    padding: 14px 16px;
+    width: 100%;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+    appearance: none;
+    outline: none;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--accent-buy);
+  }
+
+  body.sell-mode input:focus, body.sell-mode select:focus, body.sell-mode textarea:focus {
+    border-color: var(--accent-sell);
+  }
+
+  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b6b8a' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 16px center; padding-right: 40px; }
+
+  select option { background: var(--surface2); }
+
+  textarea { resize: none; min-height: 80px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* Photo Upload */
+  .photo-zone {
+    border: 1.5px dashed var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .photo-zone:hover { border-color: var(--accent-buy); }
+  body.sell-mode .photo-zone:hover { border-color: var(--accent-sell); }
+
+  .photo-zone input[type="file"] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer;
+    width: 100%; height: 100%; padding: 0; border: none;
+  }
+
+  .photo-zone .icon { font-size: 32px; display: block; margin-bottom: 8px; }
+  .photo-zone .label { font-size: 13px; color: var(--muted); }
+  .photo-zone .sublabel { font-size: 11px; color: var(--muted); opacity: 0.6; margin-top: 4px; }
+
+  .photo-preview {
+    width: 100%;
+    border-radius: 10px;
+    display: none;
+    max-height: 200px;
+    object-fit: cover;
+  }
+
+  /* AI Reading indicator */
+  .ai-status {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: var(--surface2);
+    border-radius: 12px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .ai-status.visible { display: flex; }
+
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent-buy);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+  }
+
+  body.sell-mode .spinner { border-top-color: var(--accent-sell); }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Submit Button */
+  .submit-btn {
+    background: var(--accent-buy);
+    color: #000;
+    border: none;
+    border-radius: 14px;
+    padding: 18px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 16px;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    width: 100%;
+    transition: all 0.2s;
+    margin-top: 8px;
+  }
+
+  body.sell-mode .submit-btn { background: var(--accent-sell); }
+
+  .submit-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .submit-btn:active { transform: translateY(0); opacity: 0.8; }
+  .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 20px;
+    font-size: 13px;
+    color: var(--text);
+    z-index: 100;
+    opacity: 0;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    max-width: calc(100vw - 48px);
+    text-align: center;
+  }
+
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.success { border-color: var(--accent-buy); color: var(--accent-buy); }
+  .toast.error { border-color: var(--accent-sell); color: var(--accent-sell); }
+
+  /* Section divider */
+  .section-label {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Sell mode: existing slab picker */
+  .instock-list {
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 260px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .instock-list.visible { display: flex; }
+
+  .slab-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .slab-card:hover, .slab-card.selected {
+    border-color: var(--accent-sell);
+    background: var(--accent-sell-dim);
+  }
+
+  .slab-card-name {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.3;
+    flex: 1;
+  }
+
+  .slab-card-meta {
+    font-size: 11px;
+    color: var(--muted);
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .slab-card-cost {
+    font-size: 12px;
+    color: var(--accent-sell);
+  }
+
+  .search-box {
+    margin-bottom: 4px;
+  }
+
+  .or-divider {
+    text-align: center;
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    position: relative;
+    margin: 4px 0;
+  }
+
+  .mode-section { display: none; }
+  .mode-section.active { display: flex; flex-direction: column; gap: 16px; }
+</style>
+</head>
+<body class="buy-mode">
+
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    SlabLog
+  </div>
+  <div class="subtitle">Pokemon TCG · Trade Show Logger</div>
+</header>
+
+<div class="mode-toggle">
+  <button class="mode-btn active-buy" id="btn-buy" onclick="setMode('buy')">
+    <span class="icon">📥</span>
+    BUY
+  </button>
+  <button class="mode-btn" id="btn-sell" onclick="setMode('sell')">
+    <span class="icon">💸</span>
+    SELL
+  </button>
+</div>
+
+<div class="form-area">
+
+  <!-- BUY MODE -->
+  <div class="mode-section active" id="buy-section">
+
+    <div class="section-label">Scan or Fill</div>
+
+    <div class="field-group">
+      <div class="field-label">Photo of Slab (optional)</div>
+      <div class="photo-zone" id="photo-zone-buy">
+        <input type="file" accept="image/*" capture="environment" id="photo-input-buy" onchange="handlePhoto('buy')">
+        <span class="icon">📷</span>
+        <div class="label">Tap to photograph slab</div>
+        <div class="sublabel">AI will read card details automatically</div>
+        <img class="photo-preview" id="preview-buy" alt="Slab photo">
+      </div>
+      <div class="ai-status" id="ai-status-buy">
+        <div class="spinner"></div>
+        <span>Reading slab with AI…</span>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <div class="field-label">Card Name</div>
+      <input type="text" id="buy-name" placeholder="e.g. Gengar Vmax Jap" autocomplete="off">
+    </div>
+
+    <div class="grid-2">
+      <div class="field-group">
+        <div class="field-label">Language / Type</div>
+        <select id="buy-type">
+          <option value="Japanese">Japanese</option>
+          <option value="English">English</option>
+          <option value="Korean">Korean</option>
+          <option value="Chinese">Chinese</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Grade</div>
+        <select id="buy-grade">
+          <option value="10">PSA 10</option>
+          <option value="9">PSA 9</option>
+          <option value="8">PSA 8</option>
+          <option value="7">PSA 7</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <div class="field-label">Cost Price (SGD)</div>
+      <input type="number" id="buy-cost" placeholder="e.g. 850" inputmode="decimal" step="0.01">
+    </div>
+
+    <div class="field-group">
+      <div class="field-label">Remarks (optional)</div>
+      <textarea id="buy-remarks" placeholder="e.g. Trade-in + $200 cash top up"></textarea>
+    </div>
+
+    <button class="submit-btn" id="buy-submit" onclick="submitBuy()">
+      LOG PURCHASE →
+    </button>
+  </div>
+
+  <!-- SELL MODE -->
+  <div class="mode-section" id="sell-section">
+
+    <div class="section-label">Select from Instock</div>
+
+    <div class="field-group search-box">
+      <div class="field-label">Search Inventory</div>
+      <input type="text" id="sell-search" placeholder="Search card name…" oninput="filterSlabs()" autocomplete="off">
+    </div>
+
+    <div class="instock-list visible" id="instock-list">
+      <div style="color: var(--muted); font-size: 12px; padding: 8px; text-align: center;">Loading inventory…</div>
+    </div>
+
+    <div class="or-divider">── or add new slab ──</div>
+
+    <div class="field-group">
+      <div class="field-label">Card Name</div>
+      <input type="text" id="sell-name" placeholder="e.g. Charizard ex ST" autocomplete="off">
+    </div>
+
+    <div class="grid-2">
+      <div class="field-group">
+        <div class="field-label">Language / Type</div>
+        <select id="sell-type">
+          <option value="Japanese">Japanese</option>
+          <option value="English">English</option>
+          <option value="Korean">Korean</option>
+          <option value="Chinese">Chinese</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Grade</div>
+        <select id="sell-grade">
+          <option value="10">PSA 10</option>
+          <option value="9">PSA 9</option>
+          <option value="8">PSA 8</option>
+          <option value="7">PSA 7</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="field-group">
+        <div class="field-label">Cost (SGD)</div>
+        <input type="number" id="sell-cost" placeholder="0.00" inputmode="decimal" step="0.01">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Sold Price (SGD)</div>
+        <input type="number" id="sell-price" placeholder="e.g. 1200" inputmode="decimal" step="0.01">
+      </div>
+    </div>
+
+    <div class="field-group">
+      <div class="field-label">Remarks (optional)</div>
+      <textarea id="sell-remarks" placeholder="e.g. Sold at Suntec tradeshow"></textarea>
+    </div>
+
+    <button class="submit-btn" id="sell-submit" onclick="submitSell()">
+      LOG SALE →
+    </button>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SPREADSHEET_ID = '1rgqILpi1AnEXk8kWyH-oRd-B2Y7DuatVkXxCuo68yEg';
+let currentMode = 'buy';
+let instockSlabs = [];
+let selectedSlab = null;
+
+function setMode(mode) {
+  currentMode = mode;
+  document.body.className = mode + '-mode';
+  document.getElementById('buy-section').className = 'mode-section' + (mode === 'buy' ? ' active' : '');
+  document.getElementById('sell-section').className = 'mode-section' + (mode === 'sell' ? ' active' : '');
+  document.getElementById('btn-buy').className = 'mode-btn' + (mode === 'buy' ? ' active-buy' : '');
+  document.getElementById('btn-sell').className = 'mode-btn' + (mode === 'sell' ? ' active-sell' : '');
+  if (mode === 'sell' && instockSlabs.length === 0) loadInstockSlabs();
+}
+
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.className = 'toast', 3500);
+}
+
+function formatDate(d) {
+  const dd = String(d.getDate()).padStart(2,'0');
+  const mm = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
+  return `${dd}-${mm}-${d.getFullYear()}`;
+}
+
+// ─── Photo + AI Reading ───────────────────────────────────────────
+async function handlePhoto(mode) {
+  const input = document.getElementById('photo-input-' + mode);
+  const file = input.files[0];
+  if (!file) return;
+
+  const preview = document.getElementById('preview-' + mode);
+  const zone = document.getElementById('photo-zone-' + mode);
+  const status = document.getElementById('ai-status-' + mode);
+
+  // Show preview
+  const reader = new FileReader();
+  reader.onload = e => {
+    preview.src = e.target.result;
+    preview.style.display = 'block';
+    zone.querySelector('.icon').style.display = 'none';
+    zone.querySelector('.label').style.display = 'none';
+    zone.querySelector('.sublabel').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+
+  // AI read
+  status.classList.add('visible');
+  try {
+    const base64 = await fileToBase64(file);
+    const result = await readSlabWithAI(base64, file.type);
+    if (result) {
+      if (result.name) document.getElementById(mode + '-name').value = result.name;
+      if (result.type) {
+        const sel = document.getElementById(mode + '-type');
+        for (let o of sel.options) if (o.value === result.type) { sel.value = result.type; break; }
+      }
+      if (result.grade) {
+        const sel = document.getElementById(mode + '-grade');
+        for (let o of sel.options) if (o.value == result.grade) { sel.value = result.grade; break; }
+      }
+      showToast('✓ Card details filled in', 'success');
+    }
+  } catch(e) {
+    showToast('Could not read slab — fill in manually', 'error');
+  }
+  status.classList.remove('visible');
+}
+
+function fileToBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+async function readSlabWithAI(base64, mimeType) {
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64 } },
+          { type: 'text', text: 'This is a Pokemon TCG graded slab. Extract: card name, language (Japanese/English/Korean/Chinese), and PSA grade number. Reply ONLY with JSON like: {"name":"Gengar Vmax","type":"Japanese","grade":"10"}. If you cannot read something, omit that field.' }
+        ]
+      }]
+    })
+  });
+  const data = await resp.json();
+  const text = data.content?.find(b => b.type === 'text')?.text || '';
+  const clean = text.replace(/```json|```/g, '').trim();
+  return JSON.parse(clean);
+}
+
+// ─── Load Instock Slabs ───────────────────────────────────────────
+async function loadInstockSlabs() {
+  const list = document.getElementById('instock-list');
+  list.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px;text-align:center">Loading inventory…</div>';
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: 'You are a data extractor. Return ONLY valid JSON, no markdown, no explanation.',
+        messages: [{
+          role: 'user',
+          content: `From this Pokemon earning tracker data, extract all slabs with Status = "Instock". Return JSON array: [{"name":"...","type":"...","grade":"...","cost":0}]. Data from the Slabs tab:\n\n` + getInstockData()
+        }]
+      })
+    });
+    const data = await resp.json();
+    const text = data.content?.find(b => b.type === 'text')?.text || '[]';
+    instockSlabs = JSON.parse(text.replace(/```json|```/g, '').trim());
+    renderSlabs(instockSlabs);
+  } catch(e) {
+    list.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px;text-align:center">Could not load — search manually</div>';
+  }
+}
+
+function getInstockData() {
+  // Hardcoded instock from last read — will be refreshed on each session
+  return `Kanazawa Pikachu pkm centre | Japanese | 10 | $615.00 | Instock
+M Charizard ex IX | Japanese | 10 | $1,630.00 | Instock
+M Gengar ex SAR MD | Japanese | 10 | $1,100.00 | Instock
+Lugia V PT | Japanese | 10 | $1,900.00 | Instock
+Umbreon TF | Japanese | 10 | $880.00 | Instock
+Gengar Vmax | Japanese | 10 | $3,200.00 | Instock
+Sleeping Raichu | Japanese | 10 | $85.00 | Instock
+Snorlax double blaze | Japanese | 10 | $280.00 | Instock
+Pikachu Aeon | Japanese | 10 | $590.00 | Instock
+Mcdonald Charmander | Japanese | 10 | $5,400.00 | Instock
+Magikarp AR | Japanese | 10 | $430.00 | Instock
+Charmeleon baby shiny | Japanese | 10 | $130.00 | Instock
+Burgerchu | Japanese | 10 | $130.00 | Instock
+Vensusaur ex 1st ed | Japanese | 10 | $130.00 | Instock
+Lapras AR | Japanese | 10 | $90.00 | Instock
+Pikachu campaign 2020 | Japanese | 10 | $200.00 | Instock
+Charmander 2023 classic | Japanese | 10 | $125.00 | Instock
+Cp6 Blastoise | Japanese | 10 | $0.00 | Instock
+25th Blastoise | Japanese | 10 | $250.00 | Instock
+3 birds english gx slab | English | 10 | $190.00 | Instock
+Umbreon Yu nagaba | Japanese | 10 | $350.00 | Instock
+M Gengar ex SAR MD | Japanese | 10 | $100.00 | Instock
+M Gengar ex SAR MD | Japanese | 10 | $100.00 | Instock
+Charizard ex ST | Japanese | 10 | $740.00 | Instock
+Prismatic Pikachu gold | English | 10 | $50.00 | Instock
+Fareast buyback | - | - | $207.00 | Instock
+Lucario Vstar | English | 10 | $172.50 | Instock
+Pikachu Zekrom | Japanese | 10 | $250.00 | Instock
+Slowpoke Psyduck GX | English | 10 | $675.00 | Instock
+Umbreon ex TF | Japanese | 10 | $830.00 | Instock
+Pikachu SAR MD | Japanese | 10 | $810.00 | Instock
+Mega Charizard SAR IX | Japanese | 10 | $1,600.00 | Instock`;
+}
+
+function renderSlabs(slabs) {
+  const list = document.getElementById('instock-list');
+  if (!slabs.length) {
+    list.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px;text-align:center">No instock slabs found</div>';
+    return;
+  }
+  list.innerHTML = slabs.map((s, i) => `
+    <div class="slab-card" id="slab-${i}" onclick="selectSlab(${i})">
+      <div class="slab-card-name">${s.name}</div>
+      <div class="slab-card-meta">
+        <div>${s.type} · PSA ${s.grade}</div>
+        <div class="slab-card-cost">${s.cost ? '$' + s.cost.toFixed(2) : '—'}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function filterSlabs() {
+  const q = document.getElementById('sell-search').value.toLowerCase();
+  const filtered = instockSlabs.filter(s => s.name.toLowerCase().includes(q));
+  renderSlabs(filtered);
+  selectedSlab = null;
+}
+
+function selectSlab(i) {
+  document.querySelectorAll('.slab-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('slab-' + i).classList.add('selected');
+  const filtered = getFilteredSlabs();
+  selectedSlab = filtered[i];
+  // Auto-fill fields
+  document.getElementById('sell-name').value = selectedSlab.name || '';
+  const typeEl = document.getElementById('sell-type');
+  for (let o of typeEl.options) if (o.value === selectedSlab.type) { typeEl.value = selectedSlab.type; break; }
+  document.getElementById('sell-grade').value = selectedSlab.grade || '10';
+  document.getElementById('sell-cost').value = selectedSlab.cost || '';
+}
+
+function getFilteredSlabs() {
+  const q = document.getElementById('sell-search').value.toLowerCase();
+  return q ? instockSlabs.filter(s => s.name.toLowerCase().includes(q)) : instockSlabs;
+}
+
+// ─── Submit Buy ───────────────────────────────────────────────────
+async function submitBuy() {
+  const name = document.getElementById('buy-name').value.trim();
+  const type = document.getElementById('buy-type').value;
+  const grade = document.getElementById('buy-grade').value;
+  const cost = document.getElementById('buy-cost').value;
+  const remarks = document.getElementById('buy-remarks').value.trim();
+
+  if (!name) { showToast('Please enter a card name', 'error'); return; }
+
+  const btn = document.getElementById('buy-submit');
+  btn.disabled = true;
+  btn.textContent = 'Logging…';
+
+  try {
+    await appendToSheet([name, type, grade, cost ? parseFloat(cost) : '', 'Instock', '', '', cost ? -parseFloat(cost) : 0, remarks]);
+    showToast('✓ Purchase logged!', 'success');
+    clearBuyForm();
+  } catch(e) {
+    showToast('Failed to log — check connection', 'error');
+    console.error(e);
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'LOG PURCHASE →';
+}
+
+// ─── Submit Sell ──────────────────────────────────────────────────
+async function submitSell() {
+  const name = document.getElementById('sell-name').value.trim();
+  const type = document.getElementById('sell-type').value;
+  const grade = document.getElementById('sell-grade').value;
+  const cost = parseFloat(document.getElementById('sell-cost').value) || 0;
+  const price = parseFloat(document.getElementById('sell-price').value);
+  const remarks = document.getElementById('sell-remarks').value.trim();
+
+  if (!name) { showToast('Please enter a card name', 'error'); return; }
+  if (!price) { showToast('Please enter the sold price', 'error'); return; }
+
+  const btn = document.getElementById('sell-submit');
+  btn.disabled = true;
+  btn.textContent = 'Logging…';
+
+  const profit = price - cost;
+  const today = formatDate(new Date());
+
+  try {
+    await appendToSheet([name, type, grade, cost || '', 'Sold', today, price, profit, remarks]);
+    showToast('✓ Sale logged! Profit: $' + profit.toFixed(2), 'success');
+    clearSellForm();
+  } catch(e) {
+    showToast('Failed to log — check connection', 'error');
+    console.error(e);
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'LOG SALE →';
+}
+
+// ─── Append to Sheet via AI + MCP ────────────────────────────────
+async function appendToSheet(rowData) {
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      system: 'You are a Google Sheets assistant. Append the given row to the Slabs sheet of the Pokemon earning tracker.',
+      messages: [{
+        role: 'user',
+        content: `Append this row to the Slabs tab (sheet) in spreadsheet ID ${SPREADSHEET_ID}. The columns are: Item name, Type, Grade, Cost, Status, Date Sold, Price Sold, Profit, Remarks. Row data: ${JSON.stringify(rowData)}. Use the Google Drive MCP to do this.`
+      }],
+      mcp_servers: [{ type: 'url', url: 'https://drivemcp.googleapis.com/mcp/v1', name: 'gdrive' }]
+    })
+  });
+  if (!resp.ok) throw new Error('API error ' + resp.status);
+  return resp.json();
+}
+
+function clearBuyForm() {
+  ['buy-name','buy-cost','buy-remarks'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('preview-buy').style.display = 'none';
+  document.getElementById('photo-zone-buy').querySelector('.icon').style.display = 'block';
+  document.getElementById('photo-zone-buy').querySelector('.label').style.display = 'block';
+  document.getElementById('photo-zone-buy').querySelector('.sublabel').style.display = 'block';
+  document.getElementById('photo-input-buy').value = '';
+}
+
+function clearSellForm() {
+  ['sell-name','sell-cost','sell-price','sell-remarks','sell-search'].forEach(id => document.getElementById(id).value = '');
+  selectedSlab = null;
+  document.querySelectorAll('.slab-card').forEach(c => c.classList.remove('selected'));
+}
+</script>
+</body>
+</html>
