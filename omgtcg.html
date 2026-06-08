@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>OMG TCG</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --border: #2a2a3d;
+    --accent-buy: #00e5a0;
+    --accent-sell: #ff4f6d;
+    --accent-stats: #ffc800;
+    --accent-singles: #a78bfa;
+    --accent-buy-dim: rgba(0,229,160,0.12);
+    --accent-sell-dim: rgba(255,79,109,0.12);
+    --accent-stats-dim: rgba(255,200,0,0.10);
+    --accent-singles-dim: rgba(167,139,250,0.12);
+    --text: #f0f0f8;
+    --muted: #6b6b8a;
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 0 0 60px;
+    position: relative;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+  }
+  header { padding: 32px 24px 20px; position: relative; z-index: 1; }
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 28px;
+    letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .logo-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--accent-buy);
+    box-shadow: 0 0 12px var(--accent-buy);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.6;transform:scale(0.85)} }
+  .subtitle { color: var(--muted); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; margin-top: 4px; padding-left: 20px; }
+
+  .mode-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 0 24px;
+    margin-bottom: 12px;
+    position: relative;
+    z-index: 1;
+  }
+  .mode-btn {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+  }
+  .mode-btn .icon { font-size: 26px; }
+  .mode-btn.active-buy { background: var(--accent-buy-dim); border-color: var(--accent-buy); color: var(--accent-buy); box-shadow: 0 0 20px rgba(0,229,160,0.1); }
+  .mode-btn.active-sell { background: var(--accent-sell-dim); border-color: var(--accent-sell); color: var(--accent-sell); box-shadow: 0 0 20px rgba(255,79,109,0.1); }
+
+  .bottom-btns { padding: 0 24px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; position: relative; z-index: 1; }
+  .wide-btn {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--muted);
+    width: 100%;
+    transition: all 0.2s;
+  }
+  .wide-btn.active-singles { background: var(--accent-singles-dim); border-color: var(--accent-singles); color: var(--accent-singles); box-shadow: 0 0 20px rgba(167,139,250,0.08); }
+  .wide-btn.active-stats { background: var(--accent-stats-dim); border-color: var(--accent-stats); color: var(--accent-stats); box-shadow: 0 0 20px rgba(255,200,0,0.08); }
+
+  .form-area { padding: 0 24px; display: flex; flex-direction: column; gap: 16px; position: relative; z-index: 1; }
+  .field-label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .field-group { display: flex; flex-direction: column; }
+  input, select, textarea {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 15px;
+    padding: 14px 16px;
+    width: 100%;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+    appearance: none;
+    outline: none;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent-buy); }
+  body.sell-mode input:focus, body.sell-mode select:focus { border-color: var(--accent-sell); }
+  body.stats-mode input:focus { border-color: var(--accent-stats); }
+  body.singles-mode input:focus { border-color: var(--accent-singles); }
+  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b6b8a' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 16px center; padding-right: 40px; }
+  select option { background: var(--surface2); }
+  textarea { resize: none; min-height: 70px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .photo-zone {
+    border: 1.5px dashed var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .photo-zone:hover { border-color: var(--accent-buy); }
+  body.sell-mode .photo-zone:hover { border-color: var(--accent-sell); }
+  body.singles-mode .photo-zone:hover { border-color: var(--accent-singles); }
+  .photo-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; padding: 0; border: none; }
+  .photo-zone .icon { font-size: 32px; display: block; margin-bottom: 8px; }
+  .photo-zone .label { font-size: 13px; color: var(--muted); }
+  .photo-zone .sublabel { font-size: 11px; color: var(--muted); opacity: 0.6; margin-top: 4px; }
+  .photo-preview { width: 100%; border-radius: 10px; display: none; max-height: 180px; object-fit: cover; }
+
+  .ai-status { display: none; align-items: center; gap: 10px; padding: 12px 16px; background: var(--surface2); border-radius: 12px; font-size: 12px; color: var(--muted); }
+  .ai-status.visible { display: flex; }
+  .spinner { width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--accent-buy); border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
+  body.sell-mode .spinner { border-top-color: var(--accent-sell); }
+  body.stats-mode .spinner { border-top-color: var(--accent-stats); }
+  body.singles-mode .spinner { border-top-color: var(--accent-singles); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .submit-btn {
+    background: var(--accent-buy);
+    color: #000;
+    border: none;
+    border-radius: 14px;
+    padding: 18px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 16px;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    width: 100%;
+    transition: all 0.2s;
+    margin-top: 8px;
+  }
+  body.sell-mode .submit-btn { background: var(--accent-sell); color: #fff; }
+  body.stats-mode .submit-btn { background: var(--accent-stats); }
+  body.singles-mode .submit-btn { background: var(--accent-singles); color: #fff; }
+  .submit-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .submit-btn:active { transform: translateY(0); opacity: 0.8; }
+  .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 20px;
+    font-size: 13px;
+    color: var(--text);
+    z-index: 100;
+    opacity: 0;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    max-width: calc(100vw - 48px);
+    text-align: center;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.success { border-color: var(--accent-buy); color: var(--accent-buy); }
+  .toast.error { border-color: var(--accent-sell); color: var(--accent-sell); }
+  .toast.purple { border-color: var(--accent-singles); color: var(--accent-singles); }
+
+  .section-label { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 10px; }
+  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .instock-list { display: none; flex-direction: column; gap: 8px; max-height: 240px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+  .instock-list.visible { display: flex; }
+  .slab-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: 12px; padding: 14px 16px; cursor: pointer; transition: all 0.15s; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .slab-card:hover, .slab-card.selected { border-color: var(--accent-sell); background: var(--accent-sell-dim); }
+  .slab-card-name { font-size: 13px; font-weight: 500; line-height: 1.3; flex: 1; }
+  .slab-card-meta { font-size: 11px; color: var(--muted); text-align: right; flex-shrink: 0; }
+  .slab-card-cost { font-size: 12px; color: var(--accent-sell); }
+  .or-divider { text-align: center; color: var(--muted); font-size: 11px; letter-spacing: 0.1em; margin: 4px 0; }
+  .mode-section { display: none; }
+  .mode-section.active { display: flex; flex-direction: column; gap: 16px; }
+
+  /* Stats */
+  .stat-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 20px; display: flex; flex-direction: column; gap: 4px; min-width: 0; overflow: hidden; }
+  .stat-card.profit-pos { background: var(--accent-buy-dim); border-color: var(--accent-buy); }
+  .stat-card.profit-neg { background: var(--accent-sell-dim); border-color: var(--accent-sell); }
+  .stat-label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .stat-value { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 22px; word-break: break-all; }
+  .stat-value.green { color: var(--accent-buy); }
+  .stat-value.red { color: var(--accent-sell); }
+  .stat-value.yellow { color: var(--accent-stats); }
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; min-width: 0; }
+  .sold-item { background: var(--surface); border: 1.5px solid var(--border); border-radius: 12px; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .sold-item-info { flex: 1; }
+  .sold-item-name { font-size: 12px; line-height: 1.4; }
+  .sold-item-date { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .sold-item-right { text-align: right; flex-shrink: 0; }
+  .sold-item-profit { font-size: 14px; font-family: 'Syne', sans-serif; font-weight: 700; }
+  .sold-item-price { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .pos { color: var(--accent-buy); }
+  .neg { color: var(--accent-sell); }
+  .stats-loading { display: none; align-items: center; gap: 10px; padding: 16px; background: var(--surface2); border-radius: 12px; font-size: 12px; color: var(--muted); }
+  .stats-loading.visible { display: flex; }
+
+  /* Singles Tally */
+  .singles-action-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .action-btn {
+    border: none;
+    border-radius: 14px;
+    padding: 20px 12px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 15px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s;
+  }
+  .action-btn:active { transform: scale(0.97); opacity: 0.85; }
+  .action-btn.collected { background: var(--accent-buy); color: #000; }
+  .action-btn.spent { background: var(--accent-sell); color: #fff; }
+  .action-btn .btn-icon { font-size: 24px; }
+  .action-btn .btn-label { font-size: 13px; letter-spacing: 0.04em; }
+  .action-btn .btn-sub { font-size: 10px; opacity: 0.7; font-family: 'DM Mono', monospace; font-weight: 400; }
+
+  .tally-totals {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .tally-col { display: flex; flex-direction: column; gap: 4px; }
+  .tally-col-label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .tally-col-value { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 22px; word-break: break-all; }
+  .tally-col-value.green { color: var(--accent-buy); }
+  .tally-col-value.red { color: var(--accent-sell); }
+  .tally-count { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+  .tally-log { display: flex; flex-direction: column; gap: 8px; max-height: 280px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+  .tally-item {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .tally-item-photo { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; flex-shrink: 0; cursor: pointer; }
+  .tally-item-photo-placeholder { width: 44px; height: 44px; border-radius: 8px; background: var(--surface2); border: 1px solid var(--border); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .tally-item-info { flex: 1; min-width: 0; }
+  .tally-item-amount { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 16px; }
+  .tally-item-note { font-size: 11px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tally-item-time { font-size: 10px; color: var(--muted); opacity: 0.6; }
+  .tally-item-delete { background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; padding: 4px; flex-shrink: 0; }
+
+  .log-btn {
+    background: var(--accent-singles);
+    color: #fff;
+    border: none;
+    border-radius: 14px;
+    padding: 18px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 16px;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    width: 100%;
+    transition: all 0.2s;
+  }
+  .log-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .log-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 50;
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 24px;
+    width: 100%;
+    max-width: 440px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .modal-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 18px; }
+  .modal-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .modal-btn {
+    border: none;
+    border-radius: 12px;
+    padding: 14px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .modal-btn.cancel { background: var(--surface2); color: var(--muted); }
+  .modal-btn.confirm { background: var(--accent-singles); color: #fff; }
+
+  /* Photo lightbox */
+  .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 200; display: none; align-items: center; justify-content: center; padding: 20px; }
+  .lightbox.open { display: flex; }
+  .lightbox img { max-width: 100%; max-height: 90dvh; border-radius: 12px; object-fit: contain; }
+  .lightbox-close { position: absolute; top: 20px; right: 20px; background: var(--surface2); border: none; color: var(--text); font-size: 24px; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+</style>
+</head>
+<body class="buy-mode">
+
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    OMG TCG
+  </div>
+  <div class="subtitle">Trade Show · Live Logger</div>
+</header>
+
+<div class="mode-toggle">
+  <button class="mode-btn active-buy" id="btn-buy" onclick="setMode('buy')">
+    <span class="icon">📥</span>
+    BUY SLAB
+  </button>
+  <button class="mode-btn" id="btn-sell" onclick="setMode('sell')">
+    <span class="icon">💸</span>
+    SELL SLAB
+  </button>
+</div>
+
+<div class="bottom-btns">
+  <button class="wide-btn" id="btn-singles" onclick="setMode('singles')">
+    <span>🃏</span> SINGLES TALLY
+  </button>
+  <button class="wide-btn" id="btn-stats" onclick="setMode('stats')">
+    <span>📊</span> TRADESHOW STATS
+  </button>
+</div>
+
+<div class="form-area">
+
+  <!-- BUY MODE -->
+  <div class="mode-section active" id="buy-section">
+    <div class="section-label">Scan or Fill</div>
+    <div class="field-group">
+      <div class="field-label">Photo of Slab (optional)</div>
+      <div class="photo-zone" id="photo-zone-buy">
+        <input type="file" accept="image/*" capture="environment" id="photo-input-buy" onchange="handlePhoto('buy')">
+        <span class="icon">📷</span>
+        <div class="label">Tap to photograph slab</div>
+        <div class="sublabel">AI will read card details automatically</div>
+        <img class="photo-preview" id="preview-buy" alt="Slab photo">
+      </div>
+      <div class="ai-status" id="ai-status-buy">
+        <div class="spinner"></div>
+        <span>Reading slab with AI…</span>
+      </div>
+    </div>
+    <div class="field-group">
+      <div class="field-label">Card Name</div>
+      <input type="text" id="buy-name" placeholder="e.g. Gengar Vmax Jap" autocomplete="off">
+    </div>
+    <div class="grid-2">
+      <div class="field-group">
+        <div class="field-label">Language / Type</div>
+        <select id="buy-type">
+          <option value="Japanese">Japanese</option>
+          <option value="English">English</option>
+          <option value="Korean">Korean</option>
+          <option value="Chinese">Chinese</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Grade</div>
+        <select id="buy-grade">
+          <option value="10">PSA 10</option>
+          <option value="9">PSA 9</option>
+          <option value="8">PSA 8</option>
+          <option value="7">PSA 7</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-group">
+      <div class="field-label">Cost Price (SGD)</div>
+      <input type="number" id="buy-cost" placeholder="e.g. 850" inputmode="decimal" step="0.01">
+    </div>
+    <div class="field-group">
+      <div class="field-label">Remarks (optional)</div>
+      <textarea id="buy-remarks" placeholder="e.g. Trade-in + $200 cash top up"></textarea>
+    </div>
+    <button class="submit-btn" id="buy-submit" onclick="submitBuy()">LOG PURCHASE →</button>
+  </div>
+
+  <!-- SELL MODE -->
+  <div class="mode-section" id="sell-section">
+    <div class="section-label">Select from Instock</div>
+    <div class="field-group">
+      <div class="field-label">Search Inventory</div>
+      <input type="text" id="sell-search" placeholder="Search card name…" oninput="filterSlabs()" autocomplete="off">
+    </div>
+    <div class="instock-list visible" id="instock-list">
+      <div style="color:var(--muted);font-size:12px;padding:8px;text-align:center">Loading inventory…</div>
+    </div>
+    <div class="or-divider">── or add new slab ──</div>
+    <div class="field-group">
+      <div class="field-label">Card Name</div>
+      <input type="text" id="sell-name" placeholder="e.g. Charizard ex ST" autocomplete="off">
+    </div>
+    <div class="grid-2">
+      <div class="field-group">
+        <div class="field-label">Language / Type</div>
+        <select id="sell-type">
+          <option value="Japanese">Japanese</option>
+          <option value="English">English</option>
+          <option value="Korean">Korean</option>
+          <option value="Chinese">Chinese</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Grade</div>
+        <select id="sell-grade">
+          <option value="10">PSA 10</option>
+          <option value="9">PSA 9</option>
+          <option value="8">PSA 8</option>
+          <option value="7">PSA 7</option>
+        </select>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="field-group">
+        <div class="field-label">Cost (SGD)</div>
+        <input type="number" id="sell-cost" placeholder="0.00" inputmode="decimal" step="0.01">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Sold Price (SGD)</div>
+        <input type="number" id="sell-price" placeholder="e.g. 1200" inputmode="decimal" step="0.01">
+      </div>
+    </div>
+    <div class="field-group">
+      <div class="field-label">Remarks (optional)</div>
+      <textarea id="sell-remarks" placeholder="e.g. Sold at Suntec tradeshow"></textarea>
+    </div>
+    <button class="submit-btn" id="sell-submit" onclick="submitSell()">LOG SALE →</button>
+  </div>
+
+  <!-- SINGLES MODE -->
+  <div class="mode-section" id="singles-section">
+
+    <div class="section-label">Tradeshow</div>
+    <div class="field-group">
+      <div class="field-label">Event Name</div>
+      <input type="text" id="singles-event" placeholder="e.g. Suntec June" autocomplete="off">
+    </div>
+
+    <div class="singles-action-btns">
+      <button class="action-btn collected" onclick="openEntryModal('collected')">
+        <span class="btn-icon">💰</span>
+        <span class="btn-label">COLLECTED</span>
+        <span class="btn-sub">sales / trade top up in</span>
+      </button>
+      <button class="action-btn spent" onclick="openEntryModal('spent')">
+        <span class="btn-icon">📤</span>
+        <span class="btn-label">SPENT</span>
+        <span class="btn-sub">buyback / trade top up out</span>
+      </button>
+    </div>
+
+    <div class="tally-totals">
+      <div class="tally-col">
+        <div class="tally-col-label">Total Collected</div>
+        <div class="tally-col-value green" id="tally-collected">$0</div>
+        <div class="tally-count" id="tally-collected-count">0 transactions</div>
+      </div>
+      <div class="tally-col">
+        <div class="tally-col-label">Total Spent</div>
+        <div class="tally-col-value red" id="tally-spent">$0</div>
+        <div class="tally-count" id="tally-spent-count">0 transactions</div>
+      </div>
+    </div>
+
+    <div class="section-label">Transaction Log</div>
+    <div class="tally-log" id="tally-log">
+      <div style="color:var(--muted);font-size:12px;padding:8px;text-align:center">No transactions yet</div>
+    </div>
+
+    <button class="log-btn" id="log-singles-btn" onclick="openLogModal()" disabled>
+      LOG TO SHEET →
+    </button>
+  </div>
+
+  <!-- STATS MODE -->
+  <div class="mode-section" id="stats-section">
+    <div class="section-label">Filter by Date</div>
+    <div class="grid-2">
+      <div class="field-group">
+        <div class="field-label">From</div>
+        <input type="date" id="stats-from">
+      </div>
+      <div class="field-group">
+        <div class="field-label">To</div>
+        <input type="date" id="stats-to">
+      </div>
+    </div>
+    <button class="submit-btn" onclick="loadStats()">VIEW STATS →</button>
+    <div class="stats-loading" id="stats-loading">
+      <div class="spinner"></div>
+      <span>Fetching from sheet…</span>
+    </div>
+    <div id="stats-results" style="display:none; flex-direction:column; gap:16px;">
+      <div class="stats-grid">
+        <div class="stat-card" id="stat-profit-card">
+          <div class="stat-label">Total Profit</div>
+          <div class="stat-value" id="stat-profit">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Slabs Sold</div>
+          <div class="stat-value yellow" id="stat-count">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Revenue</div>
+          <div class="stat-value" id="stat-revenue" style="color:var(--text)">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Cost</div>
+          <div class="stat-value" id="stat-cost" style="color:var(--muted)">—</div>
+        </div>
+      </div>
+      <div class="section-label">Breakdown</div>
+      <div id="stats-breakdown" style="display:flex;flex-direction:column;gap:8px;"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Entry Modal -->
+<div class="modal-overlay" id="entry-modal">
+  <div class="modal">
+    <div class="modal-title" id="entry-modal-title">Add Entry</div>
+
+    <div class="field-group">
+      <div class="field-label">Amount (SGD)</div>
+      <input type="number" id="entry-amount" placeholder="e.g. 350" inputmode="decimal" step="0.01">
+    </div>
+
+    <div class="field-group">
+      <div class="field-label">Photo (optional — snap deal proof)</div>
+      <div class="photo-zone" id="photo-zone-entry" style="padding:16px;">
+        <input type="file" accept="image/*" capture="environment" id="photo-input-entry" onchange="handleEntryPhoto()">
+        <span class="icon" id="entry-photo-icon">📷</span>
+        <div class="label" id="entry-photo-label">Tap to photograph</div>
+        <img class="photo-preview" id="preview-entry" alt="Deal photo">
+      </div>
+    </div>
+
+    <div class="field-group">
+      <div class="field-label">Note (optional)</div>
+      <input type="text" id="entry-note" placeholder="e.g. Trade top up from customer" autocomplete="off">
+    </div>
+
+    <div class="modal-btns">
+      <button class="modal-btn cancel" onclick="closeEntryModal()">Cancel</button>
+      <button class="modal-btn confirm" id="entry-confirm-btn" onclick="confirmEntry()">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- Log to Sheet Modal -->
+<div class="modal-overlay" id="log-modal">
+  <div class="modal">
+    <div class="modal-title">Log to Sheet</div>
+    <div style="font-size:13px;color:var(--muted);line-height:1.6;">
+      This will log <strong style="color:var(--text)" id="log-summary"></strong> to your Singles tab as two summary rows.
+    </div>
+    <div class="field-group">
+      <div class="field-label">Confirm Event Name</div>
+      <input type="text" id="log-event-confirm" placeholder="e.g. Suntec June" autocomplete="off">
+    </div>
+    <div class="ai-status" id="log-status" style="display:none">
+      <div class="spinner"></div>
+      <span id="log-status-text">Uploading photos to Drive…</span>
+    </div>
+    <div class="modal-btns">
+      <button class="modal-btn cancel" onclick="closeLogModal()">Cancel</button>
+      <button class="modal-btn confirm" id="log-confirm-btn" onclick="confirmLog()">Log It</button>
+    </div>
+  </div>
+</div>
+
+<!-- Photo Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <img id="lightbox-img" src="" alt="Deal photo">
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbztVkhqR9i2h-yUXSACkRbtPP6h-CckdGXmbJfluzYlp7H8rF644EvGOJuQ2Ug8IgA0/exec';
+let currentMode = 'buy';
+let instockSlabs = [];
+let filteredSlabs = [];
+let selectedSlab = null;
+
+// Singles tally state
+let tallyItems = [];
+let currentEntryType = 'collected';
+let currentEntryPhotoBase64 = null;
+let currentEntryPhotoMime = null;
+
+window.onload = () => {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('stats-from').value = today;
+  document.getElementById('stats-to').value = today;
+};
+
+function setMode(mode) {
+  currentMode = mode;
+  document.body.className = mode + '-mode';
+  ['buy','sell','singles','stats'].forEach(m => {
+    document.getElementById(m + '-section').className = 'mode-section' + (m === mode ? ' active' : '');
+  });
+  document.getElementById('btn-buy').className = 'mode-btn' + (mode === 'buy' ? ' active-buy' : '');
+  document.getElementById('btn-sell').className = 'mode-btn' + (mode === 'sell' ? ' active-sell' : '');
+  document.getElementById('btn-singles').className = 'wide-btn' + (mode === 'singles' ? ' active-singles' : '');
+  document.getElementById('btn-stats').className = 'wide-btn' + (mode === 'stats' ? ' active-stats' : '');
+  if (mode === 'sell' && instockSlabs.length === 0) loadInstockSlabs();
+}
+
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.className = 'toast', 3500);
+}
+
+// ─── Photo + AI Slab Reading ──────────────────────────────────────
+async function handlePhoto(mode) {
+  const input = document.getElementById('photo-input-' + mode);
+  const file = input.files[0];
+  if (!file) return;
+  const preview = document.getElementById('preview-' + mode);
+  const zone = document.getElementById('photo-zone-' + mode);
+  const status = document.getElementById('ai-status-' + mode);
+  const reader = new FileReader();
+  reader.onload = e => {
+    preview.src = e.target.result;
+    preview.style.display = 'block';
+    zone.querySelector('.icon').style.display = 'none';
+    zone.querySelector('.label').style.display = 'none';
+    zone.querySelector('.sublabel').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+  status.classList.add('visible');
+  try {
+    const base64 = await fileToBase64(file);
+    const result = await readSlabWithAI(base64, file.type);
+    if (result) {
+      if (result.name) document.getElementById(mode + '-name').value = result.name;
+      if (result.type) { const sel = document.getElementById(mode + '-type'); for (let o of sel.options) if (o.value === result.type) { sel.value = result.type; break; } }
+      if (result.grade) { const sel = document.getElementById(mode + '-grade'); for (let o of sel.options) if (o.value == result.grade) { sel.value = result.grade; break; } }
+      showToast('✓ Card details filled in', 'success');
+    }
+  } catch(e) { showToast('Could not read slab — fill in manually', 'error'); }
+  status.classList.remove('visible');
+}
+
+async function handleEntryPhoto() {
+  const input = document.getElementById('photo-input-entry');
+  const file = input.files[0];
+  if (!file) return;
+  const preview = document.getElementById('preview-entry');
+  document.getElementById('entry-photo-icon').style.display = 'none';
+  document.getElementById('entry-photo-label').style.display = 'none';
+  preview.style.display = 'block';
+  const reader = new FileReader();
+  reader.onload = e => { preview.src = e.target.result; };
+  reader.readAsDataURL(file);
+  currentEntryPhotoBase64 = await fileToBase64(file);
+  currentEntryPhotoMime = file.type;
+}
+
+function fileToBase64(file) {
+  return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result.split(',')[1]); r.onerror = rej; r.readAsDataURL(file); });
+}
+
+async function readSlabWithAI(base64, mimeType) {
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 500,
+      messages: [{ role: 'user', content: [
+        { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64 } },
+        { type: 'text', text: 'This is a Pokemon TCG graded slab. Extract: card name, language (Japanese/English/Korean/Chinese), and PSA grade number. Reply ONLY with JSON like: {"name":"Gengar Vmax","type":"Japanese","grade":"10"}. If you cannot read something, omit that field.' }
+      ]}]
+    })
+  });
+  const data = await resp.json();
+  const text = data.content?.find(b => b.type === 'text')?.text || '';
+  return JSON.parse(text.replace(/```json|```/g, '').trim());
+}
+
+// ─── Instock Slabs ────────────────────────────────────────────────
+async function loadInstockSlabs() {
+  const list = document.getElementById('instock-list');
+  list.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:12px;text-align:center">Loading live inventory…</div>';
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL + '?action=instock');
+    instockSlabs = await resp.json();
+    filteredSlabs = [...instockSlabs];
+    renderSlabs(filteredSlabs);
+  } catch(e) {
+    list.innerHTML = '<div style="color:var(--accent-sell);font-size:12px;padding:12px;text-align:center">Could not load — check connection</div>';
+  }
+}
+
+function renderSlabs(slabs) {
+  const list = document.getElementById('instock-list');
+  if (!slabs.length) { list.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:12px;text-align:center">No instock slabs found</div>'; return; }
+  list.innerHTML = slabs.map((s, i) => `
+    <div class="slab-card" id="slab-${i}" onclick="selectSlab(${i})">
+      <div class="slab-card-name">${s.name}</div>
+      <div class="slab-card-meta">
+        <div>${s.type} · PSA ${s.grade}</div>
+        <div class="slab-card-cost">${s.cost ? '$' + Number(s.cost).toFixed(2) : '—'}</div>
+      </div>
+    </div>`).join('');
+}
+
+function filterSlabs() {
+  const q = document.getElementById('sell-search').value.toLowerCase();
+  filteredSlabs = q ? instockSlabs.filter(s => s.name.toLowerCase().includes(q)) : [...instockSlabs];
+  renderSlabs(filteredSlabs);
+  selectedSlab = null;
+}
+
+function selectSlab(i) {
+  document.querySelectorAll('.slab-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('slab-' + i).classList.add('selected');
+  selectedSlab = filteredSlabs[i];
+  document.getElementById('sell-name').value = selectedSlab.name || '';
+  const typeEl = document.getElementById('sell-type');
+  for (let o of typeEl.options) if (o.value === selectedSlab.type) { typeEl.value = selectedSlab.type; break; }
+  document.getElementById('sell-grade').value = selectedSlab.grade || '10';
+  document.getElementById('sell-cost').value = selectedSlab.cost || '';
+}
+
+// ─── Submit Buy ───────────────────────────────────────────────────
+async function submitBuy() {
+  const name = document.getElementById('buy-name').value.trim();
+  const type = document.getElementById('buy-type').value;
+  const grade = document.getElementById('buy-grade').value;
+  const cost = document.getElementById('buy-cost').value;
+  const remarks = document.getElementById('buy-remarks').value.trim();
+  if (!name) { showToast('Please enter a card name', 'error'); return; }
+  const btn = document.getElementById('buy-submit');
+  btn.disabled = true; btn.textContent = 'Logging…';
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'buy', name, type, grade, cost: parseFloat(cost) || 0, remarks }) });
+    const result = await resp.json();
+    if (result.success) { showToast('✓ Purchase logged!', 'success'); clearBuyForm(); }
+    else throw new Error();
+  } catch(e) { showToast('Failed to log — check connection', 'error'); }
+  btn.disabled = false; btn.textContent = 'LOG PURCHASE →';
+}
+
+// ─── Submit Sell ──────────────────────────────────────────────────
+async function submitSell() {
+  const name = document.getElementById('sell-name').value.trim();
+  const type = document.getElementById('sell-type').value;
+  const grade = document.getElementById('sell-grade').value;
+  const cost = parseFloat(document.getElementById('sell-cost').value) || 0;
+  const price = parseFloat(document.getElementById('sell-price').value);
+  const remarks = document.getElementById('sell-remarks').value.trim();
+  if (!name) { showToast('Please enter a card name', 'error'); return; }
+  if (!price) { showToast('Please enter the sold price', 'error'); return; }
+  const btn = document.getElementById('sell-submit');
+  btn.disabled = true; btn.textContent = 'Logging…';
+  try {
+    const payload = { action: 'sell', name, type, grade, cost, price, remarks, rowIndex: selectedSlab ? selectedSlab.rowIndex : null };
+    const resp = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
+    const result = await resp.json();
+    if (result.success) {
+      showToast('✓ Sale logged! Profit: $' + (price - cost).toFixed(2), 'success');
+      clearSellForm(); instockSlabs = []; loadInstockSlabs();
+    } else throw new Error();
+  } catch(e) { showToast('Failed to log — check connection', 'error'); }
+  btn.disabled = false; btn.textContent = 'LOG SALE →';
+}
+
+// ─── Singles Tally ────────────────────────────────────────────────
+function openEntryModal(type) {
+  currentEntryType = type;
+  currentEntryPhotoBase64 = null;
+  currentEntryPhotoMime = null;
+  document.getElementById('entry-amount').value = '';
+  document.getElementById('entry-note').value = '';
+  document.getElementById('preview-entry').style.display = 'none';
+  document.getElementById('preview-entry').src = '';
+  document.getElementById('entry-photo-icon').style.display = 'block';
+  document.getElementById('entry-photo-label').style.display = 'block';
+  document.getElementById('photo-input-entry').value = '';
+  document.getElementById('entry-modal-title').textContent = type === 'collected' ? '💰 Add Collected' : '📤 Add Spent';
+  document.getElementById('entry-confirm-btn').style.background = type === 'collected' ? 'var(--accent-buy)' : 'var(--accent-sell)';
+  document.getElementById('entry-confirm-btn').style.color = type === 'collected' ? '#000' : '#fff';
+  document.getElementById('entry-modal').classList.add('open');
+  setTimeout(() => document.getElementById('entry-amount').focus(), 300);
+}
+
+function closeEntryModal() {
+  document.getElementById('entry-modal').classList.remove('open');
+}
+
+function confirmEntry() {
+  const amount = parseFloat(document.getElementById('entry-amount').value);
+  if (!amount || amount <= 0) { showToast('Please enter an amount', 'error'); return; }
+  const note = document.getElementById('entry-note').value.trim();
+  const now = new Date();
+  const time = now.toTimeString().slice(0,5);
+  const item = {
+    id: Date.now(),
+    type: currentEntryType,
+    amount,
+    note,
+    time,
+    photoBase64: currentEntryPhotoBase64,
+    photoMime: currentEntryPhotoMime,
+    photoSrc: currentEntryPhotoBase64 ? `data:${currentEntryPhotoMime};base64,${currentEntryPhotoBase64}` : null
+  };
+  tallyItems.push(item);
+  closeEntryModal();
+  updateTally();
+  showToast(currentEntryType === 'collected' ? '✓ $' + amount.toFixed(2) + ' collected' : '✓ $' + amount.toFixed(2) + ' spent', currentEntryType === 'collected' ? 'success' : 'error');
+}
+
+function deleteTallyItem(id) {
+  tallyItems = tallyItems.filter(i => i.id !== id);
+  updateTally();
+}
+
+function updateTally() {
+  const collected = tallyItems.filter(i => i.type === 'collected');
+  const spent = tallyItems.filter(i => i.type === 'spent');
+  const totalCollected = collected.reduce((s, i) => s + i.amount, 0);
+  const totalSpent = spent.reduce((s, i) => s + i.amount, 0);
+
+  document.getElementById('tally-collected').textContent = '$' + totalCollected.toFixed(2);
+  document.getElementById('tally-spent').textContent = '$' + totalSpent.toFixed(2);
+  document.getElementById('tally-collected-count').textContent = collected.length + ' transaction' + (collected.length !== 1 ? 's' : '');
+  document.getElementById('tally-spent-count').textContent = spent.length + ' transaction' + (spent.length !== 1 ? 's' : '');
+
+  const logEl = document.getElementById('tally-log');
+  if (!tallyItems.length) {
+    logEl.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px;text-align:center">No transactions yet</div>';
+  } else {
+    logEl.innerHTML = [...tallyItems].reverse().map(item => `
+      <div class="tally-item">
+        ${item.photoSrc
+          ? `<img class="tally-item-photo" src="${item.photoSrc}" onclick="openLightbox('${item.photoSrc}')">`
+          : `<div class="tally-item-photo-placeholder">${item.type === 'collected' ? '💰' : '📤'}</div>`}
+        <div class="tally-item-info">
+          <div class="tally-item-amount ${item.type === 'collected' ? 'pos' : 'neg'}">${item.type === 'collected' ? '+' : '-'}$${item.amount.toFixed(2)}</div>
+          ${item.note ? `<div class="tally-item-note">${item.note}</div>` : ''}
+          <div class="tally-item-time">${item.time}</div>
+        </div>
+        <button class="tally-item-delete" onclick="deleteTallyItem(${item.id})">×</button>
+      </div>`).join('');
+  }
+  document.getElementById('log-singles-btn').disabled = tallyItems.length === 0;
+}
+
+function openLogModal() {
+  const event = document.getElementById('singles-event').value.trim();
+  const collected = tallyItems.filter(i => i.type === 'collected').reduce((s, i) => s + i.amount, 0);
+  const spent = tallyItems.filter(i => i.type === 'spent').reduce((s, i) => s + i.amount, 0);
+  document.getElementById('log-summary').textContent = `$${collected.toFixed(2)} sales + $${spent.toFixed(2)} buybacks (${tallyItems.length} transactions)`;
+  document.getElementById('log-event-confirm').value = event;
+  document.getElementById('log-modal').classList.add('open');
+}
+
+function closeLogModal() {
+  document.getElementById('log-modal').classList.remove('open');
+}
+
+async function confirmLog() {
+  const eventName = document.getElementById('log-event-confirm').value.trim();
+  if (!eventName) { showToast('Please enter the event name', 'error'); return; }
+
+  const btn = document.getElementById('log-confirm-btn');
+  const statusEl = document.getElementById('log-status');
+  const statusText = document.getElementById('log-status-text');
+  btn.disabled = true;
+  statusEl.style.display = 'flex';
+
+  const collected = tallyItems.filter(i => i.type === 'collected').reduce((s, i) => s + i.amount, 0);
+  const spent = tallyItems.filter(i => i.type === 'spent').reduce((s, i) => s + i.amount, 0);
+
+  // Collect photos for upload
+  const photos = tallyItems.filter(i => i.photoBase64).map(i => ({
+    base64: i.photoBase64,
+    mime: i.photoMime,
+    type: i.type,
+    amount: i.amount,
+    note: i.note,
+    time: i.time
+  }));
+
+  statusText.textContent = photos.length > 0 ? 'Uploading photos & logging…' : 'Logging to sheet…';
+
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'logSingles',
+        eventName,
+        collected,
+        spent,
+        photos,
+        transactionCount: tallyItems.length
+      })
+    });
+    const result = await resp.json();
+    if (result.success) {
+      closeLogModal();
+      showToast('✓ Logged to Singles tab!', 'purple');
+      tallyItems = [];
+      updateTally();
+      document.getElementById('singles-event').value = '';
+    } else throw new Error(result.error || 'Unknown error');
+  } catch(e) {
+    showToast('Failed to log — check connection', 'error');
+  }
+  btn.disabled = false;
+  statusEl.style.display = 'none';
+}
+
+// ─── Stats ────────────────────────────────────────────────────────
+async function loadStats() {
+  const from = document.getElementById('stats-from').value;
+  const to = document.getElementById('stats-to').value;
+  if (!from || !to) { showToast('Please select a date range', 'error'); return; }
+  document.getElementById('stats-loading').classList.add('visible');
+  document.getElementById('stats-results').style.display = 'none';
+  try {
+    const resp = await fetch(`${APPS_SCRIPT_URL}?action=stats&from=${from}&to=${to}`);
+    const data = await resp.json();
+    if (!data.length) { document.getElementById('stats-loading').classList.remove('visible'); showToast('No sales found for this period', ''); return; }
+    let totalProfit = 0, totalRevenue = 0, totalCost = 0;
+    let breakdown = '';
+    data.forEach(s => {
+      const profit = parseFloat(s.profit) || 0;
+      const price = parseFloat(s.price) || 0;
+      const cost = parseFloat(s.cost) || 0;
+      totalProfit += profit; totalRevenue += price; totalCost += cost;
+      breakdown += `<div class="sold-item">
+        <div class="sold-item-info"><div class="sold-item-name">${s.name}</div><div class="sold-item-date">${s.dateSold}</div></div>
+        <div class="sold-item-right"><div class="sold-item-profit ${profit >= 0 ? 'pos' : 'neg'}">$${profit.toFixed(2)}</div><div class="sold-item-price">sold $${price.toFixed(2)}</div></div>
+      </div>`;
+    });
+    document.getElementById('stat-profit').textContent = '$' + totalProfit.toFixed(2);
+    document.getElementById('stat-profit').className = 'stat-value ' + (totalProfit >= 0 ? 'green' : 'red');
+    document.getElementById('stat-profit-card').className = 'stat-card ' + (totalProfit >= 0 ? 'profit-pos' : 'profit-neg');
+    document.getElementById('stat-count').textContent = data.length;
+    document.getElementById('stat-revenue').textContent = '$' + totalRevenue.toFixed(2);
+    document.getElementById('stat-cost').textContent = '$' + totalCost.toFixed(2);
+    document.getElementById('stats-breakdown').innerHTML = breakdown;
+    document.getElementById('stats-loading').classList.remove('visible');
+    const results = document.getElementById('stats-results');
+    results.style.display = 'flex'; results.style.flexDirection = 'column'; results.style.gap = '16px';
+  } catch(e) {
+    document.getElementById('stats-loading').classList.remove('visible');
+    showToast('Could not load stats — check connection', 'error');
+  }
+}
+
+// ─── Lightbox ─────────────────────────────────────────────────────
+function openLightbox(src) {
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+}
+
+// ─── Clear Forms ──────────────────────────────────────────────────
+function clearBuyForm() {
+  ['buy-name','buy-cost','buy-remarks'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('preview-buy').style.display = 'none';
+  document.getElementById('photo-zone-buy').querySelector('.icon').style.display = 'block';
+  document.getElementById('photo-zone-buy').querySelector('.label').style.display = 'block';
+  document.getElementById('photo-zone-buy').querySelector('.sublabel').style.display = 'block';
+  document.getElementById('photo-input-buy').value = '';
+}
+function clearSellForm() {
+  ['sell-name','sell-cost','sell-price','sell-remarks','sell-search'].forEach(id => document.getElementById(id).value = '');
+  selectedSlab = null; filteredSlabs = [...instockSlabs];
+  document.querySelectorAll('.slab-card').forEach(c => c.classList.remove('selected'));
+}
+</script>
+</body>
+</html>
